@@ -1,0 +1,7 @@
+{
+    "squat": {
+        "knee_min_angle": 80,
+        "hip_max_angle": 100,
+        "torso_max_tilt": 30
+    }
+}
