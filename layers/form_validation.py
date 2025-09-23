@@ -1,5 +1,4 @@
 # layers/form_validation.py
-
 import json
 
 class FormValidator:
@@ -16,25 +15,38 @@ class FormValidator:
             print(f"Error: Config file '{config_file}' not found.")
             return {}
 
-    def validate_squat(self, angles):
-        """Checks angles against predefined squat thresholds."""
-        self.feedback = {}
-        thresholds = self.angle_thresholds.get('squat', {})
+    def validate_squat(self, angles, keypoints, bio_mechanics_instance):
+        """
+        Checks angles and CoG balance against predefined squat thresholds.
+        """
+        self.feedback = {} # Reset feedback for each new validation
+        thresholds = self.angle_thresholds.get('squat_parallel', {})
+        
+        knee_min, knee_max = thresholds.get('knee_angle_target_range', [90, 110])
+        hip_max = thresholds.get('hip_angle_target_range', [70, 105])[1] # We only need the max for this check
+        torso_max = thresholds.get('torso_max_tilt', 30)
+        cog_max_offset = thresholds.get('cog_max_horizontal_offset', 0.07)
 
-        # Validate knee angles (should be close to a straight line at the top)
-        if angles.get('knee_left') and angles['knee_left'] < thresholds.get('knee_min_angle', 90):
-            self.feedback['knee_left_form'] = "Left knee too bent."
-        if angles.get('knee_right') and angles['knee_right'] < thresholds.get('knee_min_angle', 90):
-            self.feedback['knee_right_form'] = "Right knee too bent."
+        # -- ANGLE VALIDATION --
+        avg_knee_angle = (angles.get('knee_left', 180) + angles.get('knee_right', 180)) / 2
+        avg_hip_angle = (angles.get('hip_left', 180) + angles.get('hip_right', 180)) / 2
 
-        # Validate hip angles (should be less than 90 degrees at the bottom)
-        if angles.get('hip_left') and angles['hip_left'] > thresholds.get('hip_max_angle', 100):
-            self.feedback['hip_left_form'] = "Left hip not low enough."
-        if angles.get('hip_right') and angles['hip_right'] > thresholds.get('hip_max_angle', 100):
-            self.feedback['hip_right_form'] = "Right hip not low enough."
+        if avg_knee_angle > knee_max:
+            self.feedback['depth'] = "Squat deeper to bring your thighs parallel to the floor."
+        
+        if avg_hip_angle > hip_max:
+            self.feedback['hip_hinge'] = "Not low enough. Hinge more at your hips."
 
-        # Validate torso tilt (should not be too far forward)
-        if angles.get('torso_tilt') and angles['torso_tilt'] > thresholds.get('torso_max_tilt', 30):
-            self.feedback['torso_form'] = "Torso leaning too far forward."
+        if angles.get('torso_tilt', 0) > torso_max:
+            self.feedback['torso_form'] = "Keep your chest up. You are leaning too far forward."
             
+        # -- CENTER OF GRAVITY (BALANCE) VALIDATION --
+        center_of_gravity, base_of_support = bio_mechanics_instance.compute_center_of_gravity(keypoints)
+
+        if center_of_gravity and base_of_support:
+            horizontal_offset = abs(center_of_gravity['x'] - base_of_support['x'])
+            
+            if horizontal_offset > cog_max_offset:
+                self.feedback['balance'] = "You are leaning too far forward or backward. Keep your weight centered over your feet."
+
         return self.feedback

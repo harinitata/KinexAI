@@ -14,30 +14,33 @@ def main():
     serializer = Serializer()
     start_time = time.time()
     
+    print("Starting KinexAI... Press 'q' to quit.")
+
     while True:
         frame, keypoints = vision.get_frame_and_keypoints()
         if frame is None:
             break
-
+        
         cv2.imshow("KinexAI - Pose Detection", frame)
 
-        # Process every ~5 seconds as per your plan
+        # Process every ~5 seconds
         if time.time() - start_time >= 5.0:
             if keypoints:
                 angles = bio.compute_angles(keypoints)
+                
                 if angles:
-                    # Step 1: Run form validation
-                    feedback = validator.validate_squat(angles)
-
-                    # Step 2: Create JSON payload
+                    # Validate form using angles, keypoints, and the biomechanics instance
+                    feedback = validator.validate_squat(angles, keypoints, bio)
+                    
+                    # Create and print the final payload
                     current_time_ms = int(time.time() * 1000)
                     payload = serializer.create_payload(current_time_ms, angles, feedback)
-
-                    # For now, just print the payload
-                    # In a future step, you'd send this to your AI integration layer
+                    
+                    print("\n--- PAYLOAD ---")
                     print(json.dumps(payload, indent=2))
-            
-            start_time = time.time() # Reset timer
+
+            # Reset timer after analysis
+            start_time = time.time()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

@@ -1,7 +1,8 @@
 {
-    "squat": {
-        "knee_min_angle": 80,
-        "hip_max_angle": 100,
-        "torso_max_tilt": 30
-    }
+  "squat_parallel": {
+    "knee_angle_target_range": [90, 110],
+    "hip_angle_target_range": [70, 105],
+    "torso_max_tilt": 30,
+    "cog_max_horizontal_offset": 0.07
+  }
 }
